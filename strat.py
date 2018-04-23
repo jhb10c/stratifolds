@@ -288,25 +288,42 @@ class strat_graph(nx.MultiGraph):
         return True
         
         
-    def O1(self,white_node,black_nodes1,black_nodes2):
+    def O1(self,white_node,black_nodes1,black_nodes2,W0=None,W1=None,B=None):
         """
         Performs operation O1 on a copy, which is returned.
         -white_node is the node where O1 will take place
         -black_nodes1 and black_nodes2 are the groups of nodes
         that will be separated
-        In this operation all names are handled by default
+        W0 and W1 are the new white vertices created. As white_node will remain
+        connected to black_nodes1, W0 will be the white vertex connected
+        to black_nodes2. 
+        B is the new black vertex created.
         """
         verts=self.white().union(self.black())
-        W=get_int(used=verts)
-        W=[next(W) for i in range(2)]
-        bl=next(get_str(used=verts))
+        
+        if W0 is None or W1 is None:
+            W=get_int(used=verts)
+            if W0 is None:
+                W0=next(W)
+            if W1 is None:
+                W1=next(W)
+        else:
+            if W0 in verts or W1 in verts:
+                raise Exception('Vertex already in use')
+        if B is None:
+            B=next(get_str(used=verts))
+        else:
+            if B in verts:
+                raise Exception('Vertex already in use')
+                
+        
         H=self.copy()
         H.remove_node(white_node)
         edges=[(white_node,b,self[white_node][b][0]['weight']) for b in black_nodes1]
         H.addEdg(edges)
-        edges=[(W[0],b,self[white_node][b][0]['weight']) for b in black_nodes2]
+        edges=[(W0,b,self[white_node][b][0]['weight']) for b in black_nodes2]
         H.addEdg(edges)
-        H.addEdg([(white_node,bl),(W[0],bl),(W[1],bl)])
+        H.addEdg([(white_node,B),(W0,B),(W1,B)])
         return H
         
         
@@ -356,12 +373,13 @@ class strat_graph(nx.MultiGraph):
         self.addEdg([(white_node,new_black,2),(new_white,new_black)])
             
        
-    def draw(self):
+    def draw(self,trivalent=False):
         """
         Function for drawing the graph.
         Calls the function draw from networkx, coloring black vertices black
-        and white vertices gray. Intended for trivalent graphs, draws edges
-        with label 2 wider than those with label 1
+        and white vertices gray. 
+        If trivalent=True, asserts if graph is trivalent and then draws graph,
+        with edges with label 2 bold.
         """
         from matplotlib.pyplot import show
         def num_col(t):
@@ -370,8 +388,14 @@ class strat_graph(nx.MultiGraph):
             else:
                 return 'black'
         co=[num_col(self.nodes(data='bipartite')[n]) for n in self.nodes()]
-        wi=[e[2]**2 for e in list(self.edges(data='weight'))]
-        nx.draw(self,node_color=co,font_color='white',width=wi,with_labels=True)
+        if trivalent==True:
+            assert self.is_trivalent()==True
+            wi=[e[2]**2 for e in list(self.edges(data='weight'))]
+            nx.draw(self,node_color=co,font_color='white',
+                    width=wi,with_labels=True)
+        else:
+            nx.draw(self,node_color=co,font_color='white',
+                    with_labels=True)
         show()
         
         
